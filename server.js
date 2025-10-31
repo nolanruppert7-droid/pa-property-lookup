@@ -69,17 +69,41 @@ async function geocodeAddress(address) {
 async function queryRegridParcel(lat, lon) {
   const url = `https://app.regrid.com/api/v2/parcels.json?token=${REGRID_API_KEY}&lat=${lat}&lng=${lon}`;
   
+  console.log('Calling Regrid API:', url.replace(REGRID_API_KEY, 'HIDDEN'));
+  
   const response = await fetch(url, {
     headers: { 'User-Agent': 'HorstSigns-PropertyLookup/1.0' }
   });
   
-  if (!response.ok) throw new Error('Regrid API request failed');
+  console.log('Regrid response status:', response.status);
   
   const data = await response.json();
+  console.log('Regrid response data:', JSON.stringify(data).substring(0, 500));
+  
+  if (!response.ok) {
+    throw new Error(`Regrid API failed with status ${response.status}: ${JSON.stringify(data)}`);
+  }
   
   if (!data.parcels || data.parcels.length === 0) {
     throw new Error('No parcel found at this location');
   }
+  
+  const parcel = data.parcels[0];
+  const fields = parcel.fields;
+  
+  return {
+    parcelId: fields.parcelnumb || fields.parcel_id || 'N/A',
+    owner: fields.owner || 'N/A',
+    acres: fields.acres || fields.ll_gisacre || null,
+    zoning: fields.zoning || 'N/A',
+    municipality: fields.city || fields.usps_city || 'Unknown',
+    situs: fields.saddno ? `${fields.saddno} ${fields.saddstr || ''}` : fields.address || 'N/A',
+    landUse: fields.usedesc || fields.usecd || 'N/A',
+    assessment: fields.saleprice || null,
+    county: fields.county || 'Unknown',
+    rawAttributes: fields
+  };
+}
   
   const parcel = data.parcels[0];
   const fields = parcel.fields;
@@ -341,3 +365,4 @@ app.listen(PORT, () => {
   console.log('='.repeat(60));
 
 });
+
