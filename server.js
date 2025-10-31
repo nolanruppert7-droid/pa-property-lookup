@@ -4,6 +4,7 @@ const fetch = require('node-fetch');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const REGRID_API_KEY = 'eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJyZWdyaWQuY29tIiwiaWF0IjoxNzYxOTM0MzkyLCJleHAiOjE3NjQ1MjYzOTIsInUiOjYxMDU0MiwiZyI6MjMxNTMsImNhcCI6InBhOnRzOnBzOmJmOm1hOnR5OmVvOnpvOnNiIn0.MoiAdpAR5vWZ1Ljopx425qmRSJoIhd3CntQJBP5_ScE';
 
 app.use(cors());
 app.use(express.json());
@@ -65,32 +66,35 @@ async function geocodeAddress(address) {
   };
 }
 
-async function queryCountyGIS(lat, lon, county) {
-  const countyConfig = paCountyEndpoints[county];
+async function queryRegridParcel(lat, lon) {
+  const url = `https://app.regrid.com/api/v2/parcels.json?token=${REGRID_API_KEY}&lat=${lat}&lng=${lon}`;
   
-  if (!countyConfig) {
-    throw new Error(`${county} County GIS system not configured`);
-  }
+  const response = await fetch(url, {
+    headers: { 'User-Agent': 'HorstSigns-PropertyLookup/1.0' }
+  });
   
-  const result = await attemptGISQuery(countyConfig.url, lat, lon);
+  if (!response.ok) throw new Error('Regrid API request failed');
   
-  if (!result || !result.attributes) {
+  const data = await response.json();
+  
+  if (!data.parcels || data.parcels.length === 0) {
     throw new Error('No parcel found at this location');
   }
   
-  const attrs = result.attributes;
-  const fields = countyConfig.fields;
+  const parcel = data.parcels[0];
+  const fields = parcel.fields;
   
   return {
-    parcelId: attrs[fields.parcelId] || attrs.PARCEL_ID || attrs.PIN || 'N/A',
-    owner: attrs[fields.owner] || attrs.OWNER || 'N/A',
-    acres: attrs[fields.acres] || attrs.ACRES || null,
-    zoning: attrs[fields.zoning] || attrs.ZONING || 'N/A',
-    municipality: attrs[fields.muni] || attrs.MUNI || 'Unknown',
-    situs: attrs[fields.address] || attrs.SITUS_ADDR || 'N/A',
-    landUse: attrs.LAND_USE || attrs.USE_CODE || 'N/A',
-    assessment: attrs.TOTAL_VALUE || attrs.ASSESSMENT || null,
-    rawAttributes: attrs
+    parcelId: fields.parcelnumb || fields.parcel_id || 'N/A',
+    owner: fields.owner || 'N/A',
+    acres: fields.acres || fields.ll_gisacre || null,
+    zoning: fields.zoning || 'N/A',
+    municipality: fields.city || fields.usps_city || 'Unknown',
+    situs: fields.saddno ? `${fields.saddno} ${fields.saddstr || ''}` : fields.address || 'N/A',
+    landUse: fields.usedesc || fields.usecd || 'N/A',
+    assessment: fields.saleprice || null,
+    county: fields.county || 'Unknown',
+    rawAttributes: fields
   };
 }
 
@@ -128,7 +132,7 @@ app.post('/api/lookup-property', async (req, res) => {
     const geocodeResult = await geocodeAddress(address);
     console.log(`Found in ${geocodeResult.county} County`);
     
-    const parcelData = await queryCountyGIS(geocodeResult.lat, geocodeResult.lon, geocodeResult.county);
+   const parcelData = await queryRegridParcel(geocodeResult.lat, geocodeResult.lon);
     console.log(`Retrieved parcel ${parcelData.parcelId}`);
     
     const result = {
@@ -335,4 +339,6 @@ app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
   console.log(`Supported counties: ${Object.keys(paCountyEndpoints).length}`);
   console.log('='.repeat(60));
+
 });
+Integrate Regrid API
