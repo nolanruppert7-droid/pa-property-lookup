@@ -26,12 +26,12 @@ const countyConfigs = {
   berks: {
     gisUrl: 'https://gis.co.berks.pa.us/arcgis/rest/services/Assess/ParcelSearchTable/MapServer/0/query',
     fields: {
-      parcelId: ['PARID', 'PIN', 'MAPNO', 'PIN_NUM'],
-      owner: ['WBNAME', 'OWNER', 'OWNERNAME1'],
-      address: ['WBLOCN', 'SITUS', 'WBADDR', 'LOCATION'],
-      municipality: ['MUNI_NAME', 'MUNI', 'MUNICIPAL'],
-      acres: ['ACRES', 'CALC_ACRE', 'ACREAGE'],
-      landUse: ['LAND_USE', 'USE_CODE', 'LANDUSE'],
+      parcelId: ['PIN', 'PROPID', 'PARID', 'PIN_NUM'],
+      owner: ['NAME1', 'WBNAME', 'OWNER', 'OWNERNAME1'],
+      address: ['FULLMAILADDRESS', 'DESCR1', 'WBLOCN', 'SITUS', 'LOCATION'],
+      municipality: ['MUNI', 'MUNI_NAME', 'MUNICIPAL'],
+      acres: ['ACREAGE', 'ACRES', 'CALC_ACRE'],
+      landUse: ['LANDUSE', 'LAND_USE', 'USE_CODE', 'CLASS'],
       zoning: ['ZONING', 'ZONE', 'ZONE_CLASS'],
       assessment: ['TOTVAL', 'TOTAL_VAL', 'ASSESS_TOT', 'TOTAL_VALUE']
     }
@@ -461,3 +461,4 @@ app.listen(PORT, function() {
   console.log('Configured counties: ' + Object.keys(countyConfigs).join(', '));
   console.log('='.repeat(60));
 });
+
