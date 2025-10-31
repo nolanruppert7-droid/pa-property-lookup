@@ -59,7 +59,8 @@ function generateDemoParcelData(lat, lon, county) {
     situs: 'Property Address (Demo Data)',
     landUse: landUses[Math.floor(Math.random() * landUses.length)],
     assessment: Math.floor(Math.random() * 500000 + 200000),
-    county: county + ' County'
+    county: county + ' County',
+    dataSource: 'Demo Data'
   };
 }
 
@@ -81,52 +82,70 @@ async function queryCountyGIS(lat, lon, county) {
     return generateDemoParcelData(lat, lon, county);
   }
 
-  console.log(`Querying ${county} County GIS...`);
+  console.log(`Querying ${county} County GIS at ${lat}, ${lon}...`);
+
+  // Convert lat/lon to Web Mercator for better spatial queries
+  const x = lon * 20037508.34 / 180;
+  const y = Math.log(Math.tan((90 + lat) * Math.PI / 360)) / (Math.PI / 180);
+  const yMercator = y * 20037508.34 / 180;
 
   const params = new URLSearchParams({
     geometry: `${lon},${lat}`,
     geometryType: 'esriGeometryPoint',
     inSR: '4326',
     spatialRel: 'esriSpatialRelIntersects',
+    distance: '50', // 50 meter buffer to catch nearby parcels
+    units: 'esriSRUnit_Meter',
     outFields: '*',
     returnGeometry: 'false',
     f: 'json'
   });
 
   try {
-    const response = await fetch(`${endpoint}?${params}`, {
+    const queryUrl = `${endpoint}?${params}`;
+    console.log(`Full query URL: ${queryUrl.substring(0, 150)}...`);
+    
+    const response = await fetch(queryUrl, {
       headers: { 'User-Agent': 'HorstSigns-PropertyLookup/1.0' }
     });
 
     if (!response.ok) {
-      console.log(`GIS request failed with status ${response.status}, using demo data`);
+      console.log(`GIS request failed with status ${response.status}`);
       return generateDemoParcelData(lat, lon, county);
     }
 
     const data = await response.json();
+    
+    console.log(`GIS Response: ${JSON.stringify(data).substring(0, 200)}`);
+
+    if (data.error) {
+      console.log(`GIS returned error: ${JSON.stringify(data.error)}`);
+      return generateDemoParcelData(lat, lon, county);
+    }
 
     if (!data.features || data.features.length === 0) {
-      console.log(`No parcel found in GIS, using demo data`);
+      console.log(`No features returned. Feature count: ${data.features?.length || 0}`);
       return generateDemoParcelData(lat, lon, county);
     }
 
     const attrs = data.features[0].attributes;
     console.log(`✓ Retrieved REAL data from ${county} County GIS`);
+    console.log(`Parcel attributes sample: ${JSON.stringify(attrs).substring(0, 200)}`);
 
     return {
-      parcelId: attrs.PARCEL_ID || attrs.PIN || attrs.OBJECTID?.toString() || 'N/A',
-      owner: attrs.OWNER || attrs.OWNER_NAME || 'N/A',
-      acres: attrs.ACRES || attrs.CALC_ACRES || attrs.GIS_ACRES || null,
-      zoning: attrs.ZONING || attrs.ZONE || attrs.ZONING_CDE || 'N/A',
-      municipality: attrs.MUNI_NAME || attrs.MUNI || attrs.MUNICIPALITY || 'Unknown',
-      situs: attrs.SITUS_ADDR || attrs.STREET_ADD || attrs.LOCATION || attrs.ADDRESS || 'N/A',
-      landUse: attrs.LAND_USE || attrs.USE_CODE || attrs.USEDESC || 'N/A',
-      assessment: attrs.TOTAL_VALUE || attrs.ASSESSMENT || attrs.SALEPRICE || null,
+      parcelId: attrs.PARCEL_ID || attrs.PIN || attrs.PARCEL || attrs.OBJECTID?.toString() || 'N/A',
+      owner: attrs.OWNER || attrs.OWNER_NAME || attrs.OWNER1 || 'N/A',
+      acres: attrs.ACRES || attrs.CALC_ACRES || attrs.GIS_ACRES || attrs.ACREAGE || null,
+      zoning: attrs.ZONING || attrs.ZONE || attrs.ZONING_CDE || attrs.ZONECODE || 'N/A',
+      municipality: attrs.MUNI_NAME || attrs.MUNI || attrs.MUNICIPALITY || attrs.CITY || 'Unknown',
+      situs: attrs.SITUS_ADDR || attrs.STREET_ADD || attrs.LOCATION || attrs.ADDRESS || attrs.SITUS || 'N/A',
+      landUse: attrs.LAND_USE || attrs.USE_CODE || attrs.USEDESC || attrs.LANDUSE || 'N/A',
+      assessment: attrs.TOTAL_VALUE || attrs.ASSESSMENT || attrs.SALEPRICE || attrs.TOTALVALUE || null,
       county: county + ' County',
       dataSource: 'Real GIS Data'
     };
   } catch (error) {
-    console.log(`GIS error: ${error.message}, using demo data`);
+    console.log(`GIS error: ${error.message}`);
     return generateDemoParcelData(lat, lon, county);
   }
 }
@@ -215,12 +234,12 @@ app.get('/', (req, res) => {
             <h1 class="text-3xl font-bold text-gray-800 mb-2">PA Property Lookup System</h1>
             <p class="text-sm text-gray-600 mb-6">Horst Signs - Automated Property Research</p>
             <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-                <p class="text-sm text-green-800"><strong>✓ System Online:</strong> Free County GIS Integration - Lancaster, York, Berks, Chester, Dauphin, Lebanon, Cumberland counties</p>
+                <p class="text-sm text-green-800"><strong>✓ System Online:</strong> Free County GIS Integration Active</p>
             </div>
             <div class="mb-6">
                 <label class="block text-sm font-medium text-gray-700 mb-2">Property Address (Pennsylvania)</label>
                 <div class="flex gap-4">
-                    <input type="text" id="addressInput" placeholder="50 N Duke St, Lancaster, PA 17602" class="flex-1 px-4 py-3 border border-gray-300 rounded-lg"/>
+                    <input type="text" id="addressInput" placeholder="633 Court St, Reading, PA 19601" class="flex-1 px-4 py-3 border border-gray-300 rounded-lg"/>
                     <button id="lookupBtn" class="px-6 py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700"><span id="btnText">Lookup Property</span></button>
                 </div>
             </div>
@@ -232,7 +251,7 @@ app.get('/', (req, res) => {
                     <div id="propertyGrid" class="grid grid-cols-2 gap-4"></div>
                 </div>
                 <div class="flex gap-4">
-                    <button onclick="alert('Property data ready to save.')" class="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700">Save Report</button>
+                    <button onclick="alert('Property data ready.')" class="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700">Save Report</button>
                     <button onclick="window.print()" class="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700">Print</button>
                     <button onclick="clearResults()" class="px-6 py-3 bg-gray-400 text-white rounded-lg hover:bg-gray-500">Clear</button>
                 </div>
@@ -241,10 +260,9 @@ app.get('/', (req, res) => {
         <div class="bg-white rounded-lg shadow-lg p-6">
             <h3 class="text-lg font-bold text-gray-800 mb-3">Example Addresses</h3>
             <div class="space-y-2 text-sm">
-                <p class="cursor-pointer hover:text-indigo-600" onclick="useAddress('50 N Duke St, Lancaster, PA 17602')">• 50 N Duke St, Lancaster, PA 17602</p>
-                <p class="cursor-pointer hover:text-indigo-600" onclick="useAddress('1 Park City Center, Lancaster, PA 17601')">• 1 Park City Center, Lancaster, PA 17601</p>
-                <p class="cursor-pointer hover:text-indigo-600" onclick="useAddress('333 Market St, Harrisburg, PA 17101')">• 333 Market St, Harrisburg, PA 17101</p>
-                <p class="cursor-pointer hover:text-indigo-600" onclick="useAddress('1 Market Way East, York, PA 17401')">• 1 Market Way East, York, PA 17401</p>
+                <p class="cursor-pointer hover:text-indigo-600" onclick="useAddress('633 Court St, Reading, PA 19601')">• 633 Court St, Reading, PA 19601 (Berks)</p>
+                <p class="cursor-pointer hover:text-indigo-600" onclick="useAddress('50 N Duke St, Lancaster, PA 17602')">• 50 N Duke St, Lancaster, PA 17602 (Lancaster)</p>
+                <p class="cursor-pointer hover:text-indigo-600" onclick="useAddress('333 Market St, Harrisburg, PA 17101')">• 333 Market St, Harrisburg, PA 17101 (Dauphin)</p>
             </div>
         </div>
     </div>
@@ -253,8 +271,8 @@ app.get('/', (req, res) => {
         function addLog(msg,type='info'){const log=document.getElementById('logContent'),div=document.getElementById('statusLog');div.classList.remove('hidden');const colors={info:'text-blue-400',success:'text-green-400',error:'text-red-400'},entry=document.createElement('div');entry.className=colors[type]||'text-gray-400';entry.textContent='['+new Date().toLocaleTimeString()+'] '+msg;log.appendChild(entry);log.scrollTop=log.scrollHeight;}
         function showError(msg){document.getElementById('errorDisplay').classList.remove('hidden');document.getElementById('errorText').textContent=msg;addLog('Error: '+msg,'error');}
         function hideError(){document.getElementById('errorDisplay').classList.add('hidden');}
-        async function lookupProperty(){const address=document.getElementById('addressInput').value.trim();if(!address){showError('Please enter an address');return;}hideError();document.getElementById('resultsContainer').classList.add('hidden');document.getElementById('logContent').innerHTML='';const btn=document.getElementById('lookupBtn'),btnText=document.getElementById('btnText');btn.disabled=true;btnText.textContent='Processing...';try{addLog('🚀 Starting lookup...','info');const response=await fetch('/api/lookup-property',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({address})});if(!response.ok){const errorData=await response.json();throw new Error(errorData.error||'Lookup failed');}const result=await response.json();if(!result.success)throw new Error(result.error||'Lookup failed');addLog('✓ Located in '+result.geocode.county+' County','success');addLog('✓ Retrieved parcel '+result.parcel.parcelId,'success');addLog('✅ Complete!','success');displayResults(result);}catch(error){showError(error.message);}finally{btn.disabled=false;btnText.textContent='Lookup Property';}}
-        function displayResults(data){document.getElementById('countyBadge').textContent=data.geocode.county+' County';const details=[{label:'Address',value:data.parcel.situs},{label:'Township',value:data.parcel.municipality},{label:'Parcel ID',value:data.parcel.parcelId},{label:'Size',value:data.parcel.acres?data.parcel.acres+' acres':'N/A'},{label:'Zoning',value:data.parcel.zoning},{label:'Owner',value:data.parcel.owner},{label:'Land Use',value:data.parcel.landUse},{label:'Assessment',value:data.parcel.assessment?'$'+data.parcel.assessment.toLocaleString():'N/A'}];document.getElementById('propertyGrid').innerHTML=details.map(item=>'<div><p class="text-sm text-gray-600">'+item.label+'</p><p class="font-semibold text-gray-800">'+item.value+'</p></div>').join('');document.getElementById('resultsContainer').classList.remove('hidden');}
+        async function lookupProperty(){const address=document.getElementById('addressInput').value.trim();if(!address){showError('Please enter an address');return;}hideError();document.getElementById('resultsContainer').classList.add('hidden');document.getElementById('logContent').innerHTML='';const btn=document.getElementById('lookupBtn'),btnText=document.getElementById('btnText');btn.disabled=true;btnText.textContent='Processing...';try{addLog('🚀 Starting lookup...','info');const response=await fetch('/api/lookup-property',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({address})});if(!response.ok){const errorData=await response.json();throw new Error(errorData.error||'Lookup failed');}const result=await response.json();if(!result.success)throw new Error(result.error||'Lookup failed');addLog('✓ Located in '+result.geocode.county+' County','success');addLog('✓ Retrieved parcel '+result.parcel.parcelId,'success');if(result.parcel.dataSource==='Real GIS Data'){addLog('✓ Using REAL county GIS data','success');}addLog('✅ Complete!','success');displayResults(result);}catch(error){showError(error.message);}finally{btn.disabled=false;btnText.textContent='Lookup Property';}}
+        function displayResults(data){document.getElementById('countyBadge').textContent=data.geocode.county+' County';const details=[{label:'Address',value:data.parcel.situs},{label:'Township',value:data.parcel.municipality},{label:'Parcel ID',value:data.parcel.parcelId},{label:'Size',value:data.parcel.acres?data.parcel.acres+' acres':'N/A'},{label:'Zoning',value:data.parcel.zoning},{label:'Owner',value:data.parcel.owner},{label:'Land Use',value:data.parcel.landUse},{label:'Assessment',value:data.parcel.assessment?'$'+data.parcel.assessment.toLocaleString():'N/A'},{label:'Data Source',value:data.parcel.dataSource||'Demo'}];document.getElementById('propertyGrid').innerHTML=details.map(item=>'<div><p class="text-sm text-gray-600">'+item.label+'</p><p class="font-semibold text-gray-800">'+item.value+'</p></div>').join('');document.getElementById('resultsContainer').classList.remove('hidden');}
         function clearResults(){document.getElementById('resultsContainer').classList.add('hidden');document.getElementById('addressInput').value='';document.getElementById('logContent').innerHTML='';document.getElementById('statusLog').classList.add('hidden');}
         document.getElementById('lookupBtn').addEventListener('click',lookupProperty);document.getElementById('addressInput').addEventListener('keypress',e=>{if(e.key==='Enter')lookupProperty();});
     </script>
@@ -267,7 +285,6 @@ app.listen(PORT, () => {
   console.log('🚀 PA Property Lookup Backend Server');
   console.log('='.repeat(60));
   console.log(`Server running on http://localhost:${PORT}`);
-  console.log('County GIS Integration Active');
-  console.log('Test endpoint: /api/test-gis');
+  console.log('County GIS Integration with 50m radius buffer');
   console.log('='.repeat(60));
 });
