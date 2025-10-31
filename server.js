@@ -35,7 +35,7 @@ async function geocodeAddress(address) {
   };
 }
 
-async function queryRegridParcel(lat, lon) {
+aasync function queryRegridParcel(lat, lon) {
   const url = `https://app.regrid.com/api/v2/parcels/point?lat=${lat}&lon=${lon}&token=${REGRID_API_KEY}&return_geometry=false`;
   
   console.log('Calling Regrid API');
@@ -52,6 +52,28 @@ async function queryRegridParcel(lat, lon) {
   if (!response.ok) {
     throw new Error(`Regrid API failed with status ${response.status}`);
   }
+  
+  if (!data.parcels || !data.parcels.features || data.parcels.features.length === 0) {
+    throw new Error('No parcel found at this location');
+  }
+  
+  const parcel = data.parcels.features[0];
+  const props = parcel.properties;
+  const fields = props.fields || {};
+  
+  return {
+    parcelId: fields.parcelnumb || fields.parcel_id || 'N/A',
+    owner: fields.owner || 'N/A',
+    acres: fields.ll_gisacre || fields.acres || null,
+    zoning: fields.zoning || 'N/A',
+    municipality: fields.city || fields.usps_city || props.context?.name || 'Unknown',
+    situs: fields.address || props.headline || 'N/A',
+    landUse: fields.usedesc || fields.usecd || 'N/A',
+    assessment: fields.saleprice || null,
+    county: props.context?.name || 'Unknown',
+    rawAttributes: fields
+  };
+}
   
   if (!data.parcels || !data.parcels.features || data.parcels.features.length === 0) {
     throw new Error('No parcel found at this location');
@@ -328,6 +350,7 @@ app.listen(PORT, () => {
   console.log('Regrid API configured');
   console.log('='.repeat(60));
 });
+
 
 
 
