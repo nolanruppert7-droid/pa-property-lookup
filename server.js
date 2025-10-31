@@ -35,7 +35,7 @@ async function geocodeAddress(address) {
   };
 }
 
-aasync function queryRegridParcel(lat, lon) {
+async function queryRegridParcel(lat, lon) {
   const url = `https://app.regrid.com/api/v2/parcels/point?lat=${lat}&lon=${lon}&token=${REGRID_API_KEY}&return_geometry=false`;
   
   console.log('Calling Regrid API');
@@ -350,6 +350,7 @@ app.listen(PORT, () => {
   console.log('Regrid API configured');
   console.log('='.repeat(60));
 });
+
 
 
 
