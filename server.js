@@ -9,37 +9,6 @@ const REGRID_API_KEY = 'eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJyZWdyaWQuY29tIiwiaWF0Ijo
 app.use(cors());
 app.use(express.json());
 
-const paCountyEndpoints = {
-  'Lancaster': {
-    url: 'https://gis.co.lancaster.pa.us/arcgis/rest/services/Parcels/MapServer/0/query',
-    fields: { parcelId: 'PARCEL_ID', owner: 'OWNER', acres: 'ACRES', zoning: 'ZONING', muni: 'MUNI_NAME', address: 'STREET_ADD' }
-  },
-  'York': {
-    url: 'https://gis.yorkcountypa.gov/arcgis/rest/services/Parcels/MapServer/0/query',
-    fields: { parcelId: 'PIN', owner: 'OWNER_NAME', acres: 'CALC_ACRES', zoning: 'ZONING', muni: 'MUNI', address: 'SITUS_ADDR' }
-  },
-  'Berks': {
-    url: 'https://gis.co.berks.pa.us/arcgis/rest/services/Parcels/MapServer/0/query',
-    fields: { parcelId: 'PARCEL_ID', owner: 'OWNER', acres: 'ACRES', zoning: 'ZONE', muni: 'MUNICIPALITY', address: 'LOCATION' }
-  },
-  'Chester': {
-    url: 'https://gis.chesco.org/arcgis/rest/services/Parcels/MapServer/0/query',
-    fields: { parcelId: 'PARCEL_ID', owner: 'OWNER1', acres: 'ACRES', zoning: 'ZONING', muni: 'MUNI_NAME', address: 'HOUSE_NUM' }
-  },
-  'Dauphin': {
-    url: 'https://gis.dauphinc.org/arcgis/rest/services/Parcels/MapServer/0/query',
-    fields: { parcelId: 'PARCEL_ID', owner: 'OWNER', acres: 'ACRES', zoning: 'ZONING_CDE', muni: 'MUNI', address: 'SITUS_ADDR' }
-  },
-  'Lebanon': {
-    url: 'https://gis.lebcounty.org/arcgis/rest/services/Parcels/MapServer/0/query',
-    fields: { parcelId: 'PIN', owner: 'OWNER_NAME', acres: 'ACRES', zoning: 'ZONING', muni: 'MUNI_NAME', address: 'LOCATION' }
-  },
-  'Cumberland': {
-    url: 'https://gis.ccpa.net/arcgis/rest/services/Parcels/MapServer/0/query',
-    fields: { parcelId: 'PARCEL_ID', owner: 'OWNER', acres: 'ACRES', zoning: 'ZONING', muni: 'MUNI', address: 'SITUS' }
-  }
-};
-
 async function geocodeAddress(address) {
   const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address + ', Pennsylvania, USA')}&limit=1&addressdetails=1`;
   
@@ -78,7 +47,7 @@ async function queryRegridParcel(lat, lon) {
   console.log('Regrid response status:', response.status);
   
   const data = await response.json();
-  console.log('Regrid response data:', JSON.stringify(data).substring(0, 500));
+  console.log('Regrid response:', JSON.stringify(data).substring(0, 500));
   
   if (!response.ok) {
     throw new Error(`Regrid API failed with status ${response.status}: ${JSON.stringify(data)}`);
@@ -104,44 +73,6 @@ async function queryRegridParcel(lat, lon) {
     rawAttributes: fields
   };
 }
-  
-  const parcel = data.parcels[0];
-  const fields = parcel.fields;
-  
-  return {
-    parcelId: fields.parcelnumb || fields.parcel_id || 'N/A',
-    owner: fields.owner || 'N/A',
-    acres: fields.acres || fields.ll_gisacre || null,
-    zoning: fields.zoning || 'N/A',
-    municipality: fields.city || fields.usps_city || 'Unknown',
-    situs: fields.saddno ? `${fields.saddno} ${fields.saddstr || ''}` : fields.address || 'N/A',
-    landUse: fields.usedesc || fields.usecd || 'N/A',
-    assessment: fields.saleprice || null,
-    county: fields.county || 'Unknown',
-    rawAttributes: fields
-  };
-}
-
-async function attemptGISQuery(url, lat, lon) {
-  const params = new URLSearchParams({
-    geometry: `${lon},${lat}`,
-    geometryType: 'esriGeometryPoint',
-    inSR: '4326',
-    spatialRel: 'esriSpatialRelIntersects',
-    outFields: '*',
-    returnGeometry: 'false',
-    f: 'json'
-  });
-
-  const response = await fetch(`${url}?${params}`, {
-    headers: { 'User-Agent': 'HorstSigns-PropertyLookup/1.0' }
-  });
-  
-  if (!response.ok) return null;
-  
-  const data = await response.json();
-  return data.features && data.features.length > 0 ? data.features[0] : null;
-}
 
 app.post('/api/lookup-property', async (req, res) => {
   try {
@@ -156,7 +87,7 @@ app.post('/api/lookup-property', async (req, res) => {
     const geocodeResult = await geocodeAddress(address);
     console.log(`Found in ${geocodeResult.county} County`);
     
-   const parcelData = await queryRegridParcel(geocodeResult.lat, geocodeResult.lon);
+    const parcelData = await queryRegridParcel(geocodeResult.lat, geocodeResult.lon);
     console.log(`Retrieved parcel ${parcelData.parcelId}`);
     
     const result = {
@@ -177,6 +108,7 @@ app.post('/api/lookup-property', async (req, res) => {
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
 app.get('/', (req, res) => {
   res.send(`<!DOCTYPE html>
 <html lang="en">
@@ -356,13 +288,12 @@ app.get('/', (req, res) => {
 </body>
 </html>`);
 });
+
 app.listen(PORT, () => {
   console.log('='.repeat(60));
   console.log('🚀 PA Property Lookup Backend Server');
   console.log('='.repeat(60));
   console.log(`Server running on http://localhost:${PORT}`);
-  console.log(`Supported counties: ${Object.keys(paCountyEndpoints).length}`);
+  console.log('Regrid API configured');
   console.log('='.repeat(60));
-
 });
-
