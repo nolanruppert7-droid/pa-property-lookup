@@ -95,8 +95,7 @@ async function queryCountyGIS(lat, lon, county) {
 
   try {
     const response = await fetch(`${endpoint}?${params}`, {
-      headers: { 'User-Agent': 'HorstSigns-PropertyLookup/1.0' },
-      timeout: 10000
+      headers: { 'User-Agent': 'HorstSigns-PropertyLookup/1.0' }
     });
 
     if (!response.ok) {
@@ -132,6 +131,47 @@ async function queryCountyGIS(lat, lon, county) {
   }
 }
 
+app.get('/api/test-gis', async (req, res) => {
+  const results = {};
+  const counties = {
+    'Lancaster': 'https://gis.co.lancaster.pa.us/arcgis/rest/services/Parcels/MapServer/0',
+    'York': 'https://gis.yorkcountypa.gov/arcgis/rest/services/Parcels/MapServer/0',
+    'Berks': 'https://gis.co.berks.pa.us/arcgis/rest/services/Parcels/MapServer/0',
+    'Chester': 'https://gis.chesco.org/arcgis/rest/services/Parcels/MapServer/0',
+    'Dauphin': 'https://gis.dauphinc.org/arcgis/rest/services/Parcels/MapServer/0',
+    'Lebanon': 'https://gis.lebcounty.org/arcgis/rest/services/Parcels/MapServer/0',
+    'Cumberland': 'https://gis.ccpa.net/arcgis/rest/services/Parcels/MapServer/0'
+  };
+  
+  for (const [county, url] of Object.entries(counties)) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
+      
+      const response = await fetch(url + '?f=json', { 
+        signal: controller.signal,
+        headers: { 'User-Agent': 'HorstSigns-PropertyLookup/1.0' }
+      });
+      
+      clearTimeout(timeout);
+      
+      results[county] = { 
+        status: response.ok ? 'ACCESSIBLE' : 'Failed', 
+        statusCode: response.status,
+        url: url
+      };
+    } catch (error) {
+      results[county] = { 
+        status: 'BLOCKED/ERROR', 
+        error: error.message,
+        url: url
+      };
+    }
+  }
+  
+  res.json(results);
+});
+
 app.post('/api/lookup-property', async (req, res) => {
   try {
     const { address } = req.body;
@@ -159,38 +199,7 @@ app.post('/api/lookup-property', async (req, res) => {
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
-app.get('/api/test-gis', async (req, res) => {
-  const results = {};
-  const counties = {
-    'Lancaster': 'https://gis.co.lancaster.pa.us/arcgis/rest/services/Parcels/MapServer/0',
-    'York': 'https://gis.yorkcountypa.gov/arcgis/rest/services/Parcels/MapServer/0',
-    'Dauphin': 'https://gis.dauphinc.org/arcgis/rest/services/Parcels/MapServer/0'
-  };
-  
-  for (const [county, url] of Object.entries(counties)) {
-    try {
-      const response = await fetch(url + '?f=json', { 
-        timeout: 5000,
-        headers: { 'User-Agent': 'HorstSigns-PropertyLookup/1.0' }
-      });
-      results[county] = { 
-        status: response.ok ? 'OK' : 'Failed', 
-        code: response.status 
-      };
-    } catch (error) {
-      results[county] = { status: 'Error', message: error.message };
-    }
-  }
-  
-  res.json(results);
-});
-```
 
-**Commit:** "Add GIS connectivity test"
-
-Once deployed, go to:
-```
-https://pa-property-lookup.onrender.com/api/test-gis
 app.get('/', (req, res) => {
   res.send(`<!DOCTYPE html>
 <html lang="en">
@@ -206,7 +215,7 @@ app.get('/', (req, res) => {
             <h1 class="text-3xl font-bold text-gray-800 mb-2">PA Property Lookup System</h1>
             <p class="text-sm text-gray-600 mb-6">Horst Signs - Automated Property Research</p>
             <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-                <p class="text-sm text-green-800"><strong>✓ Connected:</strong> Free County GIS Integration - Real data from Lancaster, York, Berks, Chester, Dauphin, Lebanon, Cumberland counties</p>
+                <p class="text-sm text-green-800"><strong>✓ System Online:</strong> Free County GIS Integration - Lancaster, York, Berks, Chester, Dauphin, Lebanon, Cumberland counties</p>
             </div>
             <div class="mb-6">
                 <label class="block text-sm font-medium text-gray-700 mb-2">Property Address (Pennsylvania)</label>
@@ -223,7 +232,7 @@ app.get('/', (req, res) => {
                     <div id="propertyGrid" class="grid grid-cols-2 gap-4"></div>
                 </div>
                 <div class="flex gap-4">
-                    <button onclick="alert('Property data ready to save to your database.')" class="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700">Save Report</button>
+                    <button onclick="alert('Property data ready to save.')" class="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700">Save Report</button>
                     <button onclick="window.print()" class="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700">Print</button>
                     <button onclick="clearResults()" class="px-6 py-3 bg-gray-400 text-white rounded-lg hover:bg-gray-500">Clear</button>
                 </div>
@@ -258,8 +267,7 @@ app.listen(PORT, () => {
   console.log('🚀 PA Property Lookup Backend Server');
   console.log('='.repeat(60));
   console.log(`Server running on http://localhost:${PORT}`);
-  console.log('Free County GIS Integration Active');
-  console.log('Supported: Lancaster, York, Berks, Chester, Dauphin, Lebanon, Cumberland');
+  console.log('County GIS Integration Active');
+  console.log('Test endpoint: /api/test-gis');
   console.log('='.repeat(60));
 });
-
