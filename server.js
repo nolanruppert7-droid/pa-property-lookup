@@ -159,7 +159,38 @@ app.post('/api/lookup-property', async (req, res) => {
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+app.get('/api/test-gis', async (req, res) => {
+  const results = {};
+  const counties = {
+    'Lancaster': 'https://gis.co.lancaster.pa.us/arcgis/rest/services/Parcels/MapServer/0',
+    'York': 'https://gis.yorkcountypa.gov/arcgis/rest/services/Parcels/MapServer/0',
+    'Dauphin': 'https://gis.dauphinc.org/arcgis/rest/services/Parcels/MapServer/0'
+  };
+  
+  for (const [county, url] of Object.entries(counties)) {
+    try {
+      const response = await fetch(url + '?f=json', { 
+        timeout: 5000,
+        headers: { 'User-Agent': 'HorstSigns-PropertyLookup/1.0' }
+      });
+      results[county] = { 
+        status: response.ok ? 'OK' : 'Failed', 
+        code: response.status 
+      };
+    } catch (error) {
+      results[county] = { status: 'Error', message: error.message };
+    }
+  }
+  
+  res.json(results);
+});
+```
 
+**Commit:** "Add GIS connectivity test"
+
+Once deployed, go to:
+```
+https://pa-property-lookup.onrender.com/api/test-gis
 app.get('/', (req, res) => {
   res.send(`<!DOCTYPE html>
 <html lang="en">
@@ -231,3 +262,4 @@ app.listen(PORT, () => {
   console.log('Supported: Lancaster, York, Berks, Chester, Dauphin, Lebanon, Cumberland');
   console.log('='.repeat(60));
 });
+
