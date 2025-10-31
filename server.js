@@ -421,12 +421,12 @@ app.get('/', (req, res) => {
                 { label: 'Data Source', value: data.parcel.dataSource || 'Demo' }
             ];
 
-            document.getElementById('propertyGrid').innerHTML = details.map(item => `
-                <div>
-                    <p class="text-sm text-gray-600">${item.label}</p>
-                    <p class="font-semibold text-gray-800">${item.value}</p>
-                </div>
-            `).join('');
+            document.getElementById('propertyGrid').innerHTML = details.map(item => 
+                '<div>' +
+                    '<p class="text-sm text-gray-600">' + item.label + '</p>' +
+                    '<p class="font-semibold text-gray-800">' + item.value + '</p>' +
+                '</div>'
+            ).join('');
 
             document.getElementById('resultsContainer').classList.remove('hidden');
             document.getElementById('saveBtn').classList.remove('hidden');
