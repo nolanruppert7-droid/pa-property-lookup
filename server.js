@@ -209,6 +209,27 @@ async function queryDauphinCounty(lat, lon) {
     }
 
     console.log('Step 2: Querying assessment table...');
+    // TEST: Try multiple possible URLs
+const testUrls = [
+  'https://services1.arcgis.com/1zLkDAflTb7WLLps/arcgis/rest/services/Parcel_Characteristics/FeatureServer/0/query',
+  'https://services1.arcgis.com/1zLkDAflTb7WLLps/arcgis/rest/services/Tax_Roll_Table/FeatureServer/0/query',
+  'https://gis.dauphincounty.org/arcgis/rest/services/Assessment/MapServer/0/query'
+];
+
+for (const testUrl of testUrls) {
+  console.log('Testing URL:', testUrl);
+  try {
+    const testResponse = await axios.get(testUrl, {
+      params: { where: '1=1', outFields: '*', returnGeometry: false, resultRecordCount: 1, f: 'json' },
+      timeout: 5000
+    });
+    console.log('SUCCESS! Found working URL:', testUrl);
+    console.log('Sample fields:', Object.keys(testResponse.data.features[0].attributes).slice(0, 10).join(', '));
+    break;
+  } catch (e) {
+    console.log('Failed:', e.message);
+  }
+};
     
     const assessmentParams = {
   where: 'PID=\'' + propertyId + '\'',
@@ -395,6 +416,7 @@ app.listen(PORT, function() {
   console.log('Configured counties: ' + Object.keys(countyConfigs).join(', '));
   console.log('='.repeat(60));
 });
+
 
 
 
