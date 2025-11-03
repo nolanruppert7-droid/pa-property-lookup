@@ -62,17 +62,17 @@ const countyConfigs = {
       assessment: ['TOTVAL', 'TOTAL_VAL', 'ASSESS_TOT']
     }
   },
-  dauphin: {
-    gisUrl: 'https://services1.arcgis.com/1zLkDAflTb7WLLps/arcgis/rest/services/Parcel_Boundaries/FeatureServer/0/query',
+dauphin: {
+    gisUrl: 'https://services1.arcgis.com/1zLkDAflTb7WLLps/arcgis/rest/services/DC_Parcels/FeatureServer/1/query',
     fields: {
-      parcelId: ['PID', 'PIN', 'PARCEL_ID', 'PARID'],
+      parcelId: ['PARID', 'PID', 'PIN', 'PARCEL_ID'],
       owner: ['OWNER', 'OWNER_NAME', 'OWNERNAME', 'NAME1'],
-      address: ['SITUS', 'SITE_ADDR', 'LOCATION', 'ADDRESS'],
+      address: ['SITUS', 'SITE_ADDR', 'LOCATION', 'PROP_ADDR'],
       municipality: ['MUNI', 'MUNICIPAL', 'MUNI_NAME', 'MUNICIPALITY'],
       acres: ['ACRES', 'ACREAGE', 'CALC_ACRE', 'GIS_ACRES'],
-      landUse: ['LAND_USE', 'USE_CODE', 'LANDUSE', 'USE_DESC'],
-      zoning: ['ZONING', 'ZONE', 'ZONE_CLASS', 'ZONEDIST'],
-      assessment: ['TOTVAL', 'TOTAL_VAL', 'ASSESS_TOT', 'TOTAL_VALUE']
+      landUse: ['LANDUSE', 'LAND_USE', 'USE_CODE', 'USE_DESC'],
+      zoning: ['ZONING', 'ZONE', 'ZONE_CLASS'],
+      assessment: ['TOTVAL', 'TOTAL_VAL', 'ASSESS_TOT']
     }
   },
   lebanon: {
@@ -487,6 +487,7 @@ app.listen(PORT, function() {
   console.log('Configured counties: ' + Object.keys(countyConfigs).join(', '));
   console.log('='.repeat(60));
 });
+
 
 
 
