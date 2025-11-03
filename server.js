@@ -77,8 +77,6 @@ const countyConfigs = {
   },
   dauphin: {
     gisUrl: 'https://gis.dauphincounty.org/arcgis/rest/services/Parcels/MapServer/1/query',
-    console.log('Testing assessment table URL:', config.assessmentTableUrl);
-    console.log('Query where clause:', 'PID=\'' + propertyId + '\'');
     assessmentTableUrl: 'https://services1.arcgis.com/1zLkDAflTb7WLLps/arcgis/rest/services/Parcel_Characteristics/FeatureServer/0/query',
     twoStepLookup: true,
     fields: {
@@ -397,5 +395,6 @@ app.listen(PORT, function() {
   console.log('Configured counties: ' + Object.keys(countyConfigs).join(', '));
   console.log('='.repeat(60));
 });
+
 
 
