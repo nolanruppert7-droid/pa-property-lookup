@@ -211,10 +211,10 @@ async function queryDauphinCounty(lat, lon) {
     console.log('Step 2: Querying assessment table...');
     
     const assessmentParams = {
-      where: 'property_id=\'' + propertyId + '\'',
-      outFields: '*',
-      f: 'json'
-    };
+  where: 'PID=\'' + propertyId + '\'',
+  outFields: '*',
+  f: 'json'
+};
 
     try {
       const assessmentResponse = await axios.get(config.assessmentTableUrl, {
@@ -395,3 +395,4 @@ app.listen(PORT, function() {
   console.log('Configured counties: ' + Object.keys(countyConfigs).join(', '));
   console.log('='.repeat(60));
 });
+
