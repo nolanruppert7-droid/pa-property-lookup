@@ -65,14 +65,14 @@ const countyConfigs = {
 dauphin: {
     gisUrl: 'https://gis.dauphincounty.org/arcgis/rest/services/Parcels/MapServer/1/query',
     fields: {
-      parcelId: ['PARID', 'PID', 'PIN', 'PARCEL_ID'],
-      owner: ['OWNER', 'OWNER_NAME', 'OWNERNAME', 'NAME1'],
-      address: ['SITUS', 'SITE_ADDR', 'LOCATION', 'PROP_ADDR'],
-      municipality: ['MUNI', 'MUNICIPAL', 'MUNI_NAME', 'MUNICIPALITY'],
-      acres: ['ACRES', 'ACREAGE', 'CALC_ACRE', 'GIS_ACRES'],
-      landUse: ['LANDUSE', 'LAND_USE', 'USE_CODE', 'USE_DESC'],
+      parcelId: ['PID', 'PARID', 'PIN', 'PARCEL_ID'],
+      owner: ['OWNER', 'OWNER_NAME', 'OWNERNAME'],  // Not available in this layer
+      address: ['street_name', 'SITUS', 'SITE_ADDR', 'LOCATION'],  // Will use street_name
+      municipality: ['MUNICIPALITY', 'MUNI', 'MUNI_NAME'],
+      acres: ['acres', 'ACRES', 'ACREAGE', 'GIS_ACRES'],
+      landUse: ['LANDUSE', 'LAND_USE', 'USE_CODE'],
       zoning: ['ZONING', 'ZONE', 'ZONE_CLASS'],
-      assessment: ['TOTVAL', 'TOTAL_VAL', 'ASSESS_TOT']
+      assessment: ['land', 'building', 'TOTVAL', 'TOTAL_VAL']  // Will use land value
     }
   },
   lebanon: {
@@ -487,6 +487,7 @@ app.listen(PORT, function() {
   console.log('Configured counties: ' + Object.keys(countyConfigs).join(', '));
   console.log('='.repeat(60));
 });
+
 
 
 
