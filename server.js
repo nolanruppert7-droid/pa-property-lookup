@@ -210,6 +210,7 @@ async function queryDauphinCounty(lat, lon) {
 
     console.log('Step 2: Querying assessment table...');
     // TEST: Try multiple possible URLs
+// TEST: Try multiple possible URLs
 const testUrls = [
   'https://services1.arcgis.com/1zLkDAflTb7WLLps/arcgis/rest/services/Parcel_Characteristics/FeatureServer/0/query',
   'https://services1.arcgis.com/1zLkDAflTb7WLLps/arcgis/rest/services/Tax_Roll_Table/FeatureServer/0/query',
@@ -219,17 +220,25 @@ const testUrls = [
 for (const testUrl of testUrls) {
   console.log('Testing URL:', testUrl);
   try {
-    const testResponse = await axios.get(testUrl, {
-      params: { where: '1=1', outFields: '*', returnGeometry: false, resultRecordCount: 1, f: 'json' },
-      timeout: 5000
-    });
-    console.log('SUCCESS! Found working URL:', testUrl);
-    console.log('Sample fields:', Object.keys(testResponse.data.features[0].attributes).slice(0, 10).join(', '));
-    break;
+    // First, get the layer info to see available fields
+    const infoUrl = testUrl.replace('/query', '?f=json');
+    const infoResponse = await axios.get(infoUrl, { timeout: 5000 });
+    
+    if (infoResponse.data.fields) {
+      console.log('SUCCESS! Layer has', infoResponse.data.fields.length, 'fields');
+      console.log('Field names:', infoResponse.data.fields.map(f => f.name).slice(0, 15).join(', '));
+      
+      // Find fields that might contain PID
+      const pidFields = infoResponse.data.fields.filter(f => 
+        f.name.includes('PID') || f.name.includes('PARID') || f.name.includes('PARCEL')
+      );
+      console.log('PID-related fields:', pidFields.map(f => f.name).join(', '));
+      break;
+    }
   } catch (e) {
     console.log('Failed:', e.message);
   }
-};
+}
     
     const assessmentParams = {
   where: 'PID=\'' + propertyId + '\'',
@@ -416,6 +425,7 @@ app.listen(PORT, function() {
   console.log('Configured counties: ' + Object.keys(countyConfigs).join(', '));
   console.log('='.repeat(60));
 });
+
 
 
 
