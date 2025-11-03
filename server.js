@@ -74,6 +74,19 @@ const countyConfigs = {
       zoning: ['ZONING', 'ZONE', 'ZONE_CLASS', 'ZONEDIST'],
       assessment: ['TOTVAL', 'TOTAL_VAL', 'ASSESS_TOT', 'TOTAL_VALUE']
     }
+  },
+  lebanon: {
+    gisUrl: 'https://services1.arcgis.com/xaMeopcWaPbefZG7/arcgis/rest/services/Parcels/FeatureServer/0/query',
+    fields: {
+      parcelId: ['PARCEL_ID', 'PIN', 'PARID', 'PID'],
+      owner: ['OWNER', 'OWNER_NAME', 'OWNERNAME1'],
+      address: ['SITUS', 'SITE_ADDR', 'LOCATION', 'PROP_ADDR'],
+      municipality: ['MUNI', 'MUNICIPAL', 'MUNI_NAME'],
+      acres: ['ACRES', 'ACREAGE', 'CALC_ACRE', 'GIS_ACRES'],
+      landUse: ['LAND_USE', 'USE_CODE', 'LANDUSE'],
+      zoning: ['ZONING', 'ZONE', 'ZONE_CLASS'],
+      assessment: ['TOTVAL', 'TOTAL_VAL', 'ASSESS_TOT']
+    }
   }
 };
 
@@ -474,5 +487,6 @@ app.listen(PORT, function() {
   console.log('Configured counties: ' + Object.keys(countyConfigs).join(', '));
   console.log('='.repeat(60));
 });
+
 
 
