@@ -63,7 +63,7 @@ const countyConfigs = {
     }
   },
 dauphin: {
-    gisUrl: 'https://services1.arcgis.com/1zLkDAflTb7WLLps/arcgis/rest/services/DC_Parcels/FeatureServer/1/query',
+    gisUrl: 'https://gis.dauphincounty.org/arcgis/rest/services/Parcels/MapServer/1/query',
     fields: {
       parcelId: ['PARID', 'PID', 'PIN', 'PARCEL_ID'],
       owner: ['OWNER', 'OWNER_NAME', 'OWNERNAME', 'NAME1'],
@@ -487,6 +487,7 @@ app.listen(PORT, function() {
   console.log('Configured counties: ' + Object.keys(countyConfigs).join(', '));
   console.log('='.repeat(60));
 });
+
 
 
 
